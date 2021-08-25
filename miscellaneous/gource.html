@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link rel="stylesheet" href="/assets/css/style.css" media="screen" type="text/css">
+    <link rel="stylesheet" href="/assets/css/print.css" media="print" type="text/css">
+
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+<title>Gource | jessicah.nz</title>
+<meta property="og:title" content="Gource" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Collected Notes" />
+<meta property="og:description" content="Collected Notes" />
+<link rel="canonical" href="https://jessicah.nz/" />
+<meta property="og:url" content="https://jessicah.nz/" />
+<meta property="og:site_name" content="jessicah.nz" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Gource" />
+<script type="application/ld+json">
+{"description":"Collected Notes","url":"https://jessicah.nz/","headline":"Gource","@type":"WebSite","name":"jessicah.nz","@context":"https://schema.org"}</script>
+  </head>
+
+  <body>
+    <header>
+      <div class="inner">
+        <a href="https://jessicah.nz/">
+          <h1>jessicah.nz</h1>
+        </a>
+        <h2>Collected Notes</h2>
+        
+        
+          <a href="https://github.com/jessicah" class="button"><small>Follow me on</small> GitHub</a>
+        
+      </div>
+    </header>
+
+    <div id="content-wrapper">
+      <div class="inner clearfix">
+        <section id="main-content">
+          <h1>Gource</h1>
+<p><a href="https://gource.io/">Gource</a> is a source repository visualisation tool.</p>
+<p>The settings used to visualise Haiku:
+<pre><code>gource -1920x1080 --font-file OpenSans-Bold.ttf       \
+  --hide filenames,dirnames,progress,usernames        \
+  --highlight-users --seconds-per-day 0.125           \
+  --date-format "%BY %Y" --background-colour 222f5b   \
+  --default-user-image Person.png --disable-auto-skip \
+  --bloom-intensity 0.2 --bloom-multiplier 1.5        \
+  --max-user-speed 1000 --user-friction 0.33          \
+  --disable-input --no-time-travel --logo HAIKU.png   \
+  --font-size 24 --fixed-user-size &lt;repo&gt;
+</code></pre>
+</p>
+<p>This can be fed into <code>ffmpeg</code> with h264 using <code>ffmpeg -y -r 60 -f image2pipe -vcodec ppm -i &lt;output-from-gource&gt; -vcodec libx264 -preset medium -pix_fmt yuv420p -crf 1 -threads 0 -bf 0 &lt;output.mp4&gt;</code>.</p>
+
+<p>Alternatively, you could use h265 using <code>ffmpeg ... -vcodec libx265 -crf 31 -preset medium &lt;output.mp4&gt;</code>.</p>
+
+<p>Additionally, for running on a headless VM, testing the visualisation settings can be done with a vncserver, and Xvfb for generating the PPM/feeding
+  into ffmpeg.
+</p>
+<p>For vncserver on Ubuntu:
+<pre><code>sudo apt install tigervnc-standalone-server tigervnc-common
+vncserver -localhost no
+DISPLAY=:1 gource -f</code></pre>
+</p>
+<p>
+  For xvfb on Ubuntu:
+<pre><code>sudo apt install xvfb
+xvfb-run -s "-screen 0 1920x1080x24" gource -1920x1080 ...</code></pre>
+</p>
+        </section>
+      </div>
+    </div>
+
+    <footer style='text-align: center'>
+		<p>Copyright &copy; 2021&mdash;Jessica Hamilton</p>
+		<p>Email: <a href='mailto:jessica.l.hamilton@gmail.com'>jessica.l.hamilton@gmail.com</a></p>
+	</footer>
+  </body>
+</html>

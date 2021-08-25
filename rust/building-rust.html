@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link rel="stylesheet" href="/assets/css/style.css" media="screen" type="text/css">
+    <link rel="stylesheet" href="/assets/css/print.css" media="print" type="text/css">
+
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+<title>Building Rust for Haiku | jessicah.nz</title>
+<meta property="og:title" content="Building Rust for Haiku" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Collected Notes" />
+<meta property="og:description" content="Collected Notes" />
+<link rel="canonical" href="https://jessicah.nz/" />
+<meta property="og:url" content="https://jessicah.nz/" />
+<meta property="og:site_name" content="jessicah.nz" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Building Rust for Haiku" />
+<script type="application/ld+json">
+{"description":"Collected Notes","url":"https://jessicah.nz/","headline":"Building Rust for Haiku","@type":"WebSite","name":"jessicah.nz","@context":"https://schema.org"}</script>
+  </head>
+
+  <body>
+    <header>
+      <div class="inner">
+        <a href="https://jessicah.nz/">
+          <h1>jessicah.nz</h1>
+        </a>
+        <h2>Collected Notes</h2>
+        
+        
+          <a href="https://github.com/jessicah" class="button"><small>Follow me on</small> GitHub</a>
+        
+      </div>
+    </header>
+
+    <div id="content-wrapper">
+      <div class="inner clearfix">
+        <section id="main-content">
+          <h1>Building Rust for Haiku</h1>
+          <p>This is a log of all the steps I’ve undertaken in order to build <a href="https://www.rust-lang.org/">rust</a> for
+            <a href="https://www.haiku-os.org/">Haiku</a>. The hope is to make it easier for others to be able to do the same,
+            and help work on improving Haiku’s support for rust.</p>
+            
+            <h2 id="patches-not-upstreamed">Patches Not Upstreamed</h2>
+            
+            <p>For easy reference, so I know what’s missing and need to be aware of!</p>
+            
+            <ul>
+              <li><a href="https://github.com/jessicah/rust-openssl-probe/commit/20d3cbbebeeb2c6636375505a968ee467c507887">openssl-probe search paths</a></li>
+              <li><a href="https://github.com/jessicah/rust-ssh2/commit/6b72784df4c3a5da9b53711ca6d16ad3e543e29e">ssh2 target dirs</a></li>
+              <li><a href="https://github.com/jessicah/rust-net2/commit/a62cb92108aca46dd69a73d24ed678905ee86912">net2 ipv6 etc</a></li>
+              <li><a href="https://github.com/jessicah/rust-git2/commit/6f9bdf75fdaeb16d590f2ab781e12ddaa9e16523">git2 target dirs</a></li>
+              <li><a href="https://github.com/jessicah/rust-openssl/commit/a165eed9820d9862595cf9b90440963db79697af">openssl target dirs</a></li>
+              <li><a href="https://github.com/jessicah/rust-cargo/commit/91c9ae2d7fb6bd5d44ee0f04081622454371950f">cargo homedir</a></li>
+            </ul>
+            
+            <p>And cargo RFC regarding homedir: <a href="https://github.com/rust-lang/rfcs/pull/1615#issuecomment-298463034">rust rfc 1615</a>.</p>
+            
+            <h2 id="setting-up-environment">Setting Up Environment</h2>
+            
+            <p>We the new availability of a Docker container, we can simplify our life greatly :)</p>
+            
+            <p>Grab <a href="https://github.com/rust-lang/rust"><code class="language-plaintext highlighter-rouge">rust</code></a>, and then run our container:</p>
+            <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git clone https://github.com:/rust-lang/rust --recursive
+            docker run -it --name rust-build -v $(pwd)/rust:/rust haiku/cross-compiler:x86_64 bash
+            </code></pre></div></div>
+            
+            <p>We should now be running in a shell inside the container. Next we need to grab LLVM and
+            make it available to our cross-compiler:</p>
+            <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>wget http://packages.haiku-os.org/haikuports/master/hpkg/llvm-4.0.1-2-x86_64.hpkg
+            wget http://packages.haiku-os.org/haikuports/master/hpkg/llvm_libs-4.0.1-2-x86_64.hpkg
+            package extract -C /system llvm*.hpkg
+            </code></pre></div></div>
+            
+            <p>We also need our shim <code class="language-plaintext highlighter-rouge">llvm-config</code>:</p>
+            <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cat &gt;/bin/llvm-config/haiku &lt;&lt;EOF
+            #!/bin/sh
+            
+            case $1 in
+            --version) echo  4.0.1;;
+            --prefix) echo  /system;;
+            --bindir) echo  /system/bin;;
+            --includedir) echo  /system/develop/headers;;
+            --libdir) echo  /system/develop/lib;;
+            --cmakedir) echo  /system/develop/lib/cmake/llvm;;
+            --cppflags) echo  -I/system/develop/headers   -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS;;
+            --cflags) echo  -I/system/develop/headers  -fPIC -Wall -W -Wno-unused-parameter -Wwrite-strings -Wno-missing-field-initializers -pedantic -Wno-long-long -Wno-comment -Werror=date-time -ffunction-sections -fdata-sections -O3 -DNDEBUG -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS;;
+            --cxxflags) echo  -I/system/develop/headers  -fPIC -fvisibility-inlines-hidden -Wall -W -Wno-unused-parameter -Wwrite-strings -Wcast-qual -Wno-missing-field-initializers -pedantic -Wno-long-long -Wno-maybe-uninitialized -Wdelete-non-virtual-dtor -Wno-comment -Werror=date-time -std=c++11 -ffunction-sections -fdata-sections -O3 -DNDEBUG  -fno-exceptions -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS;;
+            --ldflags) echo  -L/system/develop/lib ;;
+            --system-libs) echo ;;
+            --libs) echo  -lLLVM-4.0;;
+            --libfiles) echo  /system/develop/lib/libLLVM-4.0.so;;
+            --components) echo  aarch64 aarch64asmparser aarch64asmprinter aarch64codegen aarch64desc aarch64disassembler aarch64info aarch64utils all all-targets amdgpu amdgpuasmparser amdgpuasmprinter amdgpucodegen amdgpudesc amdgpudisassembler amdgpuinfo amdgpuutils analysis arm armasmparser armasmprinter armcodegen armdesc armdisassembler arminfo asmparser asmprinter bitreader bitwriter bpf bpfasmprinter bpfcodegen bpfdesc bpfdisassembler bpfinfo codegen core coroutines coverage debuginfocodeview debuginfodwarf debuginfomsf debuginfopdb demangle engine executionengine globalisel hexagon hexagonasmparser hexagoncodegen hexagondesc hexagondisassembler hexagoninfo instcombine instrumentation interpreter ipo irreader lanai lanaiasmparser lanaicodegen lanaidesc lanaidisassembler lanaiinfo lanaiinstprinter libdriver lineeditor linker lto mc mcdisassembler mcjit mcparser mips mipsasmparser mipsasmprinter mipscodegen mipsdesc mipsdisassembler mipsinfo mirparser msp430 msp430asmprinter msp430codegen msp430desc msp430info native nativecodegen nvptx nvptxasmprinter nvptxcodegen nvptxdesc nvptxinfo objcarcopts object objectyaml option orcjit passes powerpc powerpcasmparser powerpcasmprinter powerpccodegen powerpcdesc powerpcdisassembler powerpcinfo profiledata riscv riscvcodegen riscvdesc riscvinfo runtimedyld scalaropts selectiondag sparc sparcasmparser sparcasmprinter sparccodegen sparcdesc sparcdisassembler sparcinfo support symbolize systemz systemzasmparser systemzasmprinter systemzcodegen systemzdesc systemzdisassembler systemzinfo tablegen target transformutils vectorize x86 x86asmparser x86asmprinter x86codegen x86desc x86disassembler x86info x86utils xcore xcoreasmprinter xcorecodegen xcoredesc xcoredisassembler xcoreinfo;;
+            --host-target) echo  x86_64-unknown-haiku;;
+            --has-rtti) echo  YES;;
+            --shared-mode) echo  shared;;
+            esac
+            EOF
+            </code></pre></div></div>
+            
+            <p>And now our work on cross-compiling rust begins:</p>
+            <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cd /rust
+            cat &gt;config.toml &lt;&lt;EOF
+            [llvm]
+            enabled = true
+            ninja = true
+            
+            [build]
+            host = ["x86_64-unknown-haiku"]
+            target = ["x86_64-unknown-haiku"]
+            docs = false
+            compiler-docs = false
+            submodules = false
+            
+            [install]
+            prefix=/install
+            
+            [rust]
+            use-jemalloc = false
+            
+            [target.x86_64-unknown-haiku]
+            cc = "x86_64-unknown-haiku-gcc"
+            cxx = "x86_64-unknown-haiku-g++"
+            llvm-config = "/bin/llvm-config-haiku"
+            
+            [dist]
+            src-tarball = false
+            EOF
+            ./x.py build
+            ./x.py dist
+            </code></pre></div></div>
+            
+            <p>And there you have <code class="language-plaintext highlighter-rouge">rustc</code> and friends, assuming upstream has our patches merged! If you’re making
+            changes to any sub-modules, you’ll also want to add <code class="language-plaintext highlighter-rouge">submodules = false</code> to the <code class="language-plaintext highlighter-rouge">[build]</code> section
+            in <code class="language-plaintext highlighter-rouge">config.toml</code>, otherwise the build system will try to obliterate your changes.</p>
+            
+            <p>Unfortunately, compiling <code class="language-plaintext highlighter-rouge">cargo</code> is quite a different beast, although this is mostly because of the
+            upstreamed patches mentioned. I’ve found the easiest solution is to use the cargo config file to
+            override crates at the top-level.</p>
+            
+            <p>My <code class="language-plaintext highlighter-rouge">$HOME/.cargo/config</code> file:</p>
+            <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>paths = [
+                    "/home/jessicah/vendor/socket2-rs",
+                    "/home/jessicah/vendor/rust-openssl",
+                    "/home/jessicah/vendor/rust-git2",
+                    "/home/jessicah/vendor/rust-ssh2",
+                    "/home/jessicah/vendor/curl-rust"
+            ]
+            </code></pre></div></div>
+            
+            <p>Unfortunately, I also need to rebase my branches, which I haven’t done yet. Vendoring the <code class="language-plaintext highlighter-rouge">libc</code> crate
+            does <strong>not</strong> work, so don’t even try! I found the easiest solution was to just copy the contents of
+            <code class="language-plaintext highlighter-rouge">src/liblibc</code> into the copy in <code class="language-plaintext highlighter-rouge">cargo's</code> registry under <code class="language-plaintext highlighter-rouge">$HOME/.cargo</code>. Patches for <code class="language-plaintext highlighter-rouge">libc</code> have been
+            upstreamed, and hopefully an updated release will land very shortly.</p>
+            
+            <h2 id="some-other-notes-for-cross-compiling-crates">Some Other Notes For Cross-Compiling Crates</h2>
+            
+            <p>E.g, cross-compiling our first library, jemalloc, which won’t have support for Haiku…</p>
+            <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>rm -rf build/x86_64-unknown-haiku/native/jemalloc
+            export TARGET_CC=x86_64-unknown-haiku-gcc
+            export TARGET_LD=x86_64-unknown-haiku-ld
+            </code></pre></div></div>
+            
+            <p>Where did I pick up these magic <code class="language-plaintext highlighter-rouge">TARGET_xyz</code> environment variables? This is how rust’s
+            <a href="https://github.com/alexcrichton/gcc-rs"><code class="language-plaintext highlighter-rouge">gcc-rs</code></a> module works for configuring host and target compilers. This
+            is an important enough reference to keep around, so that we can tweak our environment to suit. Eventually, I
+            think I would put configuration such as this into a shell script that I can source.</p>
+            
+            <h2 id="archived-steps">Archived Steps</h2>
+            
+            <p>Old information about <a href="https://jessicah.github.io/building-rust-archived">building rust</a>.</p>
+        </section>
+      </div>
+    </div>
+
+    <footer style='text-align: center'>
+		<p>Copyright &copy; 2021&mdash;Jessica Hamilton</p>
+		<p>Email: <a href='mailto:jessica.l.hamilton@gmail.com'>jessica.l.hamilton@gmail.com</a></p>
+	</footer>
+  </body>
+</html>

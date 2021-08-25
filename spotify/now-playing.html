@@ -1,0 +1,137 @@
+<html>
+	<head>
+		<title>Spotify Now Playing</title>
+		<link rel='stylesheet' href='now-playing.css' type='text/css' />
+		<script type='text/javascript' src='https://jessicah.nz/spotify/spotify-web-api.js'></script>
+	</head>
+	<body>
+		<div id='info'>
+			<img id='album' src='https://i.scdn.co/image/ab67616d0000b273fffbc6bb8f405c2dacf8d64b'/>
+			<p id='track'>We Are The People</p>
+			<p id='artist'>Empire of the Sun, yes, Empire of the Sun!</p>
+			<div id='background'></div>
+		</div>
+
+		<!-- need to authorize with Spotify -->
+		<form method='get' action='https://accounts.spotify.com/authorize' id='authorize_form' style='display: none'>
+			<input type='hidden' name='client_id' value='03cfcaafb9cb41398d5d6dccc0d83f96'/>
+			<input type='hidden' name='redirect_uri' value='https://jessicah.nz/spotify/now-playing.html'/>
+			<input type='hidden' name='scope' value='user-read-currently-playing'>
+			<input type='hidden' name='response_type' value='token'/>
+			<input type='submit' value='Authorize with Spotify'/>
+		</form>
+
+		<script type='text/javascript'>
+		var infoBox = document.getElementById('info');
+		var backgroundBox = document.getElementById('background');
+
+		var player = null;
+
+		function animateBox() {
+			console.log("Animating");
+
+			var width = backgroundBox.offsetWidth;
+			var bodyWidth = document.body.offsetWidth;
+
+			var offset = bodyWidth - width;
+
+			console.log("Width:", width);
+			console.log("Body width:", bodyWidth);
+			console.log("Left margin should be:", offset);
+
+			if (player != null) {
+				console.log("Removing previous animation");
+				player.cancel();
+				player = null;
+			}
+
+			var player = infoBox.animate([
+				// From
+				{ marginLeft: '100%', easing: 'ease-out' },
+				// To
+				{ marginLeft: `${offset}px` },
+				// From
+				{ marginLeft: `${offset}px`, easing: 'ease-in' },
+				// To
+				{ marginLeft: "100%" }
+			], 8000);
+		}
+
+		// Just for testing
+		document.body.addEventListener('click', function() {
+			animateBox();
+		});
+
+		var pairs = window.location.hash.substr(1).split('&');
+
+			var auth = {};
+			pairs.forEach(function(pair) {
+				pair = pair.split('=');
+				auth[pair[0]] = decodeURIComponent(pair[1] || '');
+			});
+
+		var spotifyApi = new SpotifyWebApi();
+		spotifyApi.setAccessToken(auth['access_token']);
+
+		function requestUpdate(token) {
+			console.log("Requesting update...");
+			return spotifyApi.getMyCurrentPlayingTrack({});
+		}
+
+		function successHandler(result) {
+			console.log("Got track from Spotify");
+
+			if (result.item === undefined || result.is_playing == false) {
+				console.log("No track currently playing! Check again in 5 seconds");
+				// try again in 5 seconds
+				setTimeout(tick, 5000);
+				return;
+			}
+
+			var timeMs = result.progress_ms;
+			var durationMs = result.item.duration_ms;
+			var firstArtist = result.item.artists[0].name;
+			var trackName = result.item.name;
+			console.log(firstArtist);
+			console.log(trackName);
+			var imageUrl = result.item.album.images[0].url;
+			
+			let el_album = document.getElementById("album");
+			let el_artist = document.getElementById("artist");
+			let el_title = document.getElementById("track");
+
+			if (el_artist.innerText == firstArtist && el_title.innerText == trackName) {
+				console.log("Track hasn't changed yet");
+			} else {
+				el_album.src = imageUrl;
+				el_artist.innerText = firstArtist;
+				el_title.innerText = trackName;			
+
+				// Animate box, give a small delay for network to update the image
+				setTimeout(animateBox, 1000);
+			}
+
+			console.log("Refreshing track info in: ", (durationMs - timeMs) + 1000, " milliseconds");
+			setTimeout(tick, (durationMs - timeMs) + 1000);
+		}
+
+		function failureHandler(reason) {
+			console.log("Failed to query Spotify: ", reason);
+			if (reason.status == 401) {
+				console.log("Need an updated token");
+				document.getElementById('authorize_form').submit();
+			}
+		}
+
+		function tick() {
+			let rq = requestUpdate();
+			rq.then(successHandler, failureHandler);
+			rq.catch(failureHandler);
+		}
+
+		(function() {
+			tick();
+		})();
+		</script>
+	</body>
+</html>

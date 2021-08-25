@@ -1,0 +1,317 @@
+<html>
+	<head>
+		<title>Spotify Current Track</title>
+		<script type='text/javascript' src='spotify-web-api.js'></script>
+		<style>
+			body {
+				background: transparent;
+				color: black;
+				border: 0 transparent;
+				padding: 2pt;
+				margin: 0;
+				text-align: center;
+				overflow: hidden;
+			}
+
+			.info {
+				display: inline-block;
+				width: 100%;
+				height: 32pt;
+
+				padding: 4pt 8pt;
+				margin: 0;
+				margin-top: 16pt;
+
+				font-size: 24pt;
+				font-weight: bold;
+				font-family: "Roboto", "Open Sans", sans-serif, serif;
+
+				color: white;
+				opacity: 0.0;
+				
+				background: rgba(0, 0, 0, 0.75);
+				box-shadow: 0px 0px 6pt 1pt rgba(0, 0, 0, 1.0);
+				
+				border: 1px solid black;
+				border-radius: 8px;
+			}
+
+			.info .logo {
+				width: 64pt;
+				height: 64pt;
+				margin: 0;
+				margin-top: -18pt;
+				margin-left: -6pt;
+				margin-right: 4pt;
+				padding: 1px;
+				
+				background: rgba(255,255,255, 0.5);
+				box-shadow: 0px 0px 6pt -2pt rgba(255, 255, 255, 1.0);
+				border: 1px solid black;
+				border-radius: 4px;
+			}
+
+			.info .artist,
+			.info .separator,
+			.info .title {
+				vertical-align: top;
+			}
+
+			.slideout {
+				animation-name: slide_out;
+				animation-direction: normal;
+				animation-duration: 2000ms;
+				animation-delay: 0s;
+				animation-fill-mode: both;
+				animation-iteration-count: 1;
+				animation-play-state: running;
+				animation-timing-function: ease-in;
+			}
+
+			.slidein {
+				animation-name: slide_in;
+				animation-direction: normal;
+				animation-duration: 2000ms;
+				animation-delay: 0s;
+				animation-fill-mode: both;
+				animation-iteration-count: 1;
+				animation-play-state: running;
+				animation-timing-function: ease-out;
+				display: block;
+			}
+
+			.flip {
+				animation-name: slide_in, flip;
+				animation-direction: normal;
+				animation-duration: 500ms;
+				animation-delay: 0s;
+				animation-fill-mode: both;
+				animation-iteration-count: 1;
+				animation-play-state: running;
+				animation-timing-function: linear;
+			}
+
+			@keyframes slide_out {
+				from {					
+					opacity: 1.0;
+					margin-left: 0;
+				}
+				to {
+					opacity: 1.0;
+					margin-left: 200%;
+				}
+			}
+			
+
+			@keyframes slide_in {
+				from {
+					opacity: 1.0;
+					margin-left: 200%;
+				}
+				to {
+					opacity: 1.0;
+					margin-left: 0;
+				}
+			}
+
+			@keyframes flip {
+				0% {
+					transform: rotate3d(0);
+				}
+				40% {
+					transform: rotate3d(1, 0, 0, 0.25turn);
+				}
+				60% {
+					transform: rotate3d(1, 0, 0, 0.25turn);
+				}
+				100% {
+					transform: rotate3d(0);
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Spotify Current Track</h1>
+		<form method='get' action='https://accounts.spotify.com/authorize' id='authorize_form'>
+			<input type='hidden' name='client_id' value='03cfcaafb9cb41398d5d6dccc0d83f96'/>
+			<input type='hidden' name='redirect_uri' value='https://jessicah.nz/spotify/index.html'/>
+			<input type='hidden' name='scope' value='user-read-currently-playing'>
+			<input type='hidden' name='response_type' value='token'/>
+			<input type='submit' value='Authorize with Spotify'/>
+		</form>
+		<h2>Access Token</h2>
+		<p id='access_token'>
+
+		</p>
+		<img id='album_cover' width='640' height='640' style='display:none'/>
+		<h2>Now Playing</h2>
+		<div class="info slideout" >
+			<img class="logo" id="logo"><span class="artist" id="artist">Now</span><span class="separator">&nbsp;&ndash;&nbsp;</span><span class="title" id="title">Playing</span>
+		</div>
+		<script type='text/javascript'>
+			var pairs = window.location.hash.substr(1).split('&');
+
+			var auth = {};
+			pairs.forEach(function(pair) {
+				pair = pair.split('=');
+				auth[pair[0]] = decodeURIComponent(pair[1] || '');
+			});
+
+			var spotifyApi = new SpotifyWebApi();
+
+			let playing = false;
+			let imgcache = new Image();
+			let gotToken = false;
+			let token = null;
+
+			function getToken() {
+				if (gotToken)
+					return Promise.resolve(token);
+				
+				console.log("Getting new token");
+				document.getElementById("authorize_form").submit();
+			}
+
+			function requestUpdate(token) {
+				console.log("Requesting update...");
+				spotifyApi.setAccessToken(token);
+				return spotifyApi.getMyCurrentPlayingTrack({});
+			}
+
+			function slide_out() {
+				let el_info = document.querySelector(".info");
+				el_info.classList.add("slideout");
+				el_info.classList.remove("slidein");
+			}
+
+			function slide_in() {
+				let el_info = document.querySelector(".info");
+				el_info.classList.add("slidein");
+				el_info.classList.remove("slideout");
+			}
+
+			function flip(cb) {
+				let el_info = document.querySelector(".info");
+				el_info.classList.add("flip");
+				setTimeout(cb, 200);
+				setTimeout(function() {el_info.classList.remove("flip");}, 500);
+			}
+
+			function successHandler(result) {
+				var timeMs = result.progress_ms;
+					var durationMs = result.item.duration_ms;
+					console.log(timeMs);
+					console.log(durationMs);
+					var firstArtist = result.item.artists[0].name;
+					var trackName = result.item.name;
+					console.log(firstArtist);
+					console.log(trackName);
+					var imageUrl = result.item.album.images[0].url;
+				
+				imgcache.src = imageUrl;
+
+				let el_info = document.querySelector(".info");
+				let el_logo = document.querySelector(".info .logo");
+					let el_artist = document.querySelector(".info .artist");
+					let el_title = document.querySelector(".info .title");
+
+					if (result == null) {
+						if (playing) {
+							console.log("Stopped playing track.");
+							playing = false;
+							slide_out();
+						}
+					} else if (playing == false) {
+						console.log("Started playing track.");
+						playing = true;
+						imgcache.src = imageUrl;
+						el_logo.src = imageUrl;
+						el_artist.innerText = firstArtist;
+						el_title.innerText = trackName;
+						slide_in();
+						setTimeout(slide_out, 5000);
+						playing = false;
+					} else {
+						let old_artist = el_artist.innerText;
+						let old_title = el_title.innerText;
+						if ((old_artist != firstArtist) || (old_title != trackName)) {
+							console.log("Track changed.");
+							flip(function() {
+								el_logo.src = imageUrl;
+								el_artist.innerText = firstArtist;
+								el_title.innerText = trackName;
+							});
+						}
+					}
+				
+				setTimeout(tick, (durationMs - timeMs) + 1000);
+
+				gotToken = false;
+			}
+
+			function failureHandler(reason) {
+				console.log("Failed to query Spotify: ", reason);
+				slide_out();
+				setTimeout(tick, 60000);
+			}
+
+			function tick() {
+				let rq = getToken();
+				rq.then(requestUpdate, failureHandler)
+					.then(successHandler, failureHandler);
+				rq.catch(failureHandler);
+			}
+
+			function zoom() {
+				let width = document.documentElement.clientWidth;
+				let height = document.documentElement.clientHeight;
+				let csize = document.documentElement.getBoundingClientRect();
+				let wscale = width / csize.width;
+				let hscale = height / csize.height;
+				document.body.style.zoom = hscale;
+			}
+
+			if (auth['access_token']) {
+				document.getElementById("access_token").innerHTML = "Spotify Access Token: " + auth['access_token'];
+
+				token = auth['access_token'];
+				gotToken = true;
+				
+				//spotifyApi.setAccessToken(auth['access_token']);
+
+				/*spotifyApi.getMyCurrentPlayingTrack({}, function(err, result) {
+					console.log("Error: " + err);
+					console.log("Result: " + result);
+
+					var timeMs = result.progress_ms;
+					var durationMs = result.item.duration_ms;
+					console.log(timeMs);
+					console.log(durationMs);
+					var firstArtist = result.item.artists[0].name;
+					var trackName = result.item.name;
+					console.log(firstArtist);
+					console.log(trackName);
+					var imageUrl = result.item.album.images[0].url;
+
+					var albumCoverImage = document.getElementById('album_cover');
+
+					albumCoverImage.setAttribute('src', imageUrl);
+					albumCoverImage.style.display = 'block';
+				});*/
+			}
+
+			
+			
+			(function() {
+				zoom();
+				tick();
+			})();
+
+			setInterval(function() {
+				console.log("Expiring token");
+				token = null;
+				gotToken = false;
+			}, 3500000);
+		</script>
+	</body>
+</html>

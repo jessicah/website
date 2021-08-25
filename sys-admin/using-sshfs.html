@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link rel="stylesheet" href="/assets/css/style.css" media="screen" type="text/css">
+    <link rel="stylesheet" href="/assets/css/print.css" media="print" type="text/css">
+
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+<title>Using SSHFS (with Haiku) | jessicah.nz</title>
+<meta property="og:title" content="Using SSHFS (with Haiku)" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Collected Notes" />
+<meta property="og:description" content="Collected Notes" />
+<link rel="canonical" href="https://jessicah.nz/" />
+<meta property="og:url" content="https://jessicah.nz/" />
+<meta property="og:site_name" content="jessicah.nz" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Using SSHFS (with Haiku)" />
+<script type="application/ld+json">
+{"description":"Collected Notes","url":"https://jessicah.nz/","headline":"Using SSHFS (with Haiku)","@type":"WebSite","name":"jessicah.nz","@context":"https://schema.org"}</script>
+  </head>
+
+  <body>
+    <header>
+      <div class="inner">
+        <a href="https://jessicah.nz/">
+          <h1>jessicah.nz</h1>
+        </a>
+        <h2>Collected Notes</h2>
+        
+        
+          <a href="https://github.com/jessicah" class="button"><small>Follow me on</small> GitHub</a>
+        
+      </div>
+    </header>
+
+    <div id="content-wrapper">
+      <div class="inner clearfix">
+        <section id="main-content">
+          <h1>Using SSHFS (with Haiku)</h1>
+
+          <p>Because we’re using <code class="language-plaintext highlighter-rouge">sudo</code>, we have to specify the identify file to use (for pubkey authentication).</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sudo sshfs -o follow_symlinks,allow_other,IdentityFile=$HOME/.ssh/id_rsa user@$IP_ADDRESS:/ sysroot
+</code></pre></div></div>
+
+<p>This will mount a remote installation in the directory sysroot, which is super handy with Haiku.</p>
+
+<p>We can use <code class="language-plaintext highlighter-rouge">pkgman</code> in our running Haiku installation to add any packages we need.</p>
+        </section>
+      </div>
+    </div>
+
+    <footer style='text-align: center'>
+		<p>Copyright &copy; 2021&mdash;Jessica Hamilton</p>
+		<p>Email: <a href='mailto:jessica.l.hamilton@gmail.com'>jessica.l.hamilton@gmail.com</a></p>
+	</footer>
+  </body>
+</html>

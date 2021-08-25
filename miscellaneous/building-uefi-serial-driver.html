@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link rel="stylesheet" href="/assets/css/style.css" media="screen" type="text/css">
+    <link rel="stylesheet" href="/assets/css/print.css" media="print" type="text/css">
+
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+<title>Building UEFI Serial Driver | jessicah.nz</title>
+<meta property="og:title" content="Building UEFI Serial Driver" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Collected Notes" />
+<meta property="og:description" content="Collected Notes" />
+<link rel="canonical" href="https://jessicah.nz/" />
+<meta property="og:url" content="https://jessicah.nz/" />
+<meta property="og:site_name" content="jessicah.nz" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Building UEFI Serial Driver" />
+<script type="application/ld+json">
+{"description":"Collected Notes","url":"https://jessicah.nz/","headline":"Building UEFI Serial Driver","@type":"WebSite","name":"jessicah.nz","@context":"https://schema.org"}</script>
+  </head>
+
+  <body>
+    <header>
+      <div class="inner">
+        <a href="https://jessicah.nz/">
+          <h1>jessicah.nz</h1>
+        </a>
+        <h2>Collected Notes</h2>
+        
+        
+          <a href="https://github.com/jessicah" class="button"><small>Follow me on</small> GitHub</a>
+        
+      </div>
+    </header>
+
+    <div id="content-wrapper">
+      <div class="inner clearfix">
+        <section id="main-content">
+          <h1>Building UEFI Serial Driver</h1>
+          <p>This is a quick run-down of how to build the FTDI compatible USB serial driver for UEFI with Ubuntu.</p>
+
+<p>Most of this comes from <a href="https://github.com/tianocore/tianocore.github.io/wiki/Using-EDK-II-with-Native-GCC">the edk2 instructions</a>.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sudo apt-get install iasl uuid-dev gcc-5
+mkdir src
+cd src
+git clone https://github.com/tianocore/edk2
+cd edk2
+make -C BaseTools
+. edksetup.sh
+sed -i -e 's;IA32;X64;g' Conf/target.txt
+sed -i -e 's;Nt32Pkg/Nt32Pkg.dsc;OptionRomPkg/OptionRomPkg.dsc;g' Conf/target.txt
+sed -i -e 's;MYTOOLS;GCC5;g' Conf/target.txt
+build
+find -name '*.efi' | grep -e Ftdi
+</code></pre></div></div>
+
+        </section>
+      </div>
+    </div>
+
+    <footer style='text-align: center'>
+		<p>Copyright &copy; 2021&mdash;Jessica Hamilton</p>
+		<p>Email: <a href='mailto:jessica.l.hamilton@gmail.com'>jessica.l.hamilton@gmail.com</a></p>
+	</footer>
+  </body>
+</html>
